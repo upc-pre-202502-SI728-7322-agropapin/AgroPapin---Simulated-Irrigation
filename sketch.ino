@@ -7,11 +7,11 @@ const int RELAY_PIN = 14;  // Relay connected to pin 14 for irrigation control
 const int LED_PIN = 12;    // LED connected to pin 12 for status indication
 
 // WiFi credentials
-const char* WIFI_SSID = "Wokwi-GUEST";
-const char* WIFI_PASSWORD = "";
+const char* WIFI_SSID = "Zado";
+const char* WIFI_PASSWORD = "papeto123";
 
 // MQTT configuration
-const char* MQTT_SERVER = "192.168.100.7";
+const char* MQTT_SERVER = "10.183.161.131";
 const int MQTT_PORT = 1883;
 const char* MQTT_CLIENT_ID = "agro-papin-001";
 
@@ -84,20 +84,48 @@ void loop() {
 
 /// @brief Establishes WiFi connection
 void connectWiFi() {
+  Serial.printf("Connecting to WiFi SSID='%s'\n", WIFI_SSID);
+  // Ensure station mode and clear previous connections
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  delay(100);
+
+  // Start connection
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
-  
-  while (WiFi.status() != WL_CONNECTED) {
+
+  unsigned long start = millis();
+  int dots = 0;
+  const unsigned long WIFI_TIMEOUT = 30000; // 30 seconds timeout
+
+  while (WiFi.status() != WL_CONNECTED && (millis() - start) < WIFI_TIMEOUT) {
     delay(500);
     Serial.print(".");
+    dots++;
+    // Periodically print numeric status for debugging
+    if (dots % 10 == 0) {
+      Serial.print(" status=");
+      Serial.println(WiFi.status());
+    }
   }
-  
-  Serial.println("\nWiFi connected successfully!");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("Signal strength (RSSI): ");
-  Serial.print(WiFi.RSSI());
-  Serial.println(" dBm");
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected successfully!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("Signal strength (RSSI): ");
+    Serial.print(WiFi.RSSI());
+    Serial.println(" dBm");
+  } else {
+    Serial.println("\nWiFi failed to connect within timeout.");
+    Serial.println("Scanning available networks...");
+    int n = WiFi.scanNetworks();
+    Serial.printf("Found %d networks:\n", n);
+    for (int i = 0; i < n; ++i) {
+      Serial.printf(" %d: %s (RSSI %d)\n", i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
+    }
+    Serial.println("Check SSID/Password, router band (use 2.4GHz), and AP isolation.");
+  }
 }
 
 /// @brief Connects to MQTT broker
